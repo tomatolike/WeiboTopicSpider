@@ -8,7 +8,6 @@ import random
 class WeiboSpider(scrapy.Spider):
     name = 'weibo'
     allowed_domains = ['weibo.com']
-    start_urls = ['http://s.weibo.com/top/summary?Refer=top_hot&topnav=1&wvr=6']
     success=0
 
     def __init__(self):
@@ -50,8 +49,210 @@ class WeiboSpider(scrapy.Spider):
     "Mozilla/5.0 (X11; U; Linux x86_64; zh-CN; rv:1.9.2.10) Gecko/20100922 Ubuntu/10.10 (maverick) Firefox/3.6.10",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
     ]
+    	self.cookie = "SINAGLOBAL=6682242679096.176.1508122383526; UM_distinctid=1601673940f681-01532d4f31f69d-17396d57-1aeaa0-160167394118cd; un=18867158066; UOR=www.ali213.net,widget.weibo.com,login.sina.com.cn; wvr=6; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFWF7E16egjecUNI.cWZTZr5JpX5KMhUgL.Fo-4e0-0SKnXeh-2dJLoIXnLxKBLB.zL122LxK-LBKBLBK.LxKBLB.zLB.BLxKML1-2L1hBLxKqL1-eLBKnLxK-LB-BL1K5LxKML12-L12zLxK-L12qLB-qt; ALF=1546048915; SSOLoginState=1514512916; SCF=AgwbdQ3uYn_4CQM-iwkVmGqig7g6I5Y7ZxG5mWQ-PHEFQTXeRuSgXKB79xtz7lCe3ZXbFkYLIJ7_EEhsrcZHNeg.; SUB=_2A253QdJEDeRhGeNH6FcS9SbIyzmIHXVUN0SMrDV8PUNbmtBeLUbAkW9NStbCZX9q68seqe75D2rWrIqWc-dr4XA8; SUHB=0auAk0xyYuzJnC; _s_tentry=login.sina.com.cn; Apache=693521043815.8701.1514512919866; ULV=1514512919918:16:11:8:693521043815.8701.1514512919866:1514477518108; YF-Page-G0=00acf392ca0910c1098d285f7eb74a11"
+
+
+    def start_requests(self):
+    	start_urls = 'https://d.weibo.com/100803?from=page_huati_tab'
+    	req = scrapy.Request(url=start_urls,callback=self.parse,errback=self.errback)
+    	req.meta['useragent']=random.choice(self.agent)
+    	req.meta['cookie']=self.cookie
+    	req.meta['name']="话题榜首页"
+    	req.meta['time']='1'
+    	req.meta['page']=-1
+    	req.meta['count']=-1
+    	req.meta['t_id']=""
+    	yield req
+
+    def parse4(self, response):
+    	print("4")
 
     def parse(self, response):
+    	print("开始处理话题榜")
+    	lis = response.xpath("//div[@class='text_box']")
+    	#print(response.body)
+    	print(len(lis))
+    	if(len(lis)==0):
+    		req2 = scrapy.Request(url=response.url,callback=self.parse,errback=self.errback,dont_filter = True)
+    		req2.meta['useragent']=random.choice(self.agent)
+    		req2.meta['cookie']=self.cookie
+    		req2.meta['name']=response.meta['name']
+    		req2.meta['time']='1'
+    		req2.meta['page']=-1
+    		req2.meta['count']=-1
+    		req2.meta['t_id']=""
+    		yield req2
+    	else:
+    		for i,li in enumerate(lis):
+    			if(i==1):
+    				break
+    			title = li.xpath(".//a[@target='_blank']/text()").extract()[0]
+    			title = title.replace(" ","")
+    			title = title.replace("\t","")
+    			title = title.replace("\n","")
+    			#print("name="+title)
+    			url = li.xpath(".//a[@target='_blank']/@href").extract()[0]
+    			#print(url)
+    			req = scrapy.Request(url="https:"+url,callback=self.parse2,errback=self.errback)
+    			req.meta['useragent']=random.choice(self.agent)
+    			req.meta['cookie']=self.cookie
+    			req.meta['name']=title
+    			req.meta['time']='2'
+    			req.meta['page']=-1
+    			req.meta['count']=-1
+    			req.meta['t_id']=""
+    			yield req
+
+    def parse2(self, response):
+    	net = response.xpath("//a[@class='WB_cardmore WB_cardmore_noborder S_txt1 clearfix']/@href")
+    	print(len(net))
+    	if(len(net)==0):
+    		print("wrong!")
+    		req2 = scrapy.Request(url=response.url,callback=self.parse2,errback=self.errback,dont_filter = True)
+    		req2.meta['useragent']=random.choice(self.agent)
+    		req2.meta['cookie']=self.cookie
+    		req2.meta['name']=response.meta['name']
+    		req2.meta['time']='2'
+    		req2.meta['page']=-1
+    		req2.meta['count']=-1
+    		req2.meta['t_id']=""
+    		yield req2
+    	else:
+    		net = response.xpath("//a[@class='WB_cardmore WB_cardmore_noborder S_txt1 clearfix']/@href").extract()[0]
+    		print(net)
+    		req = scrapy.Request(url=net,callback=self.parse3,errback=self.errback)
+    		url = net
+    		req.meta['useragent']=random.choice(self.agent)
+    		req.meta['cookie']=self.cookie
+    		req.meta['name']=response.meta['name']
+    		req.meta['time']='3'
+    		req.meta['page']=1
+    		req.meta['count']=0
+    		req.meta['t_id']=url[url.find("/p/")+3:url.find("/em")]
+    		yield req
+
+    def parse3(self, response):
+    	ti = response.xpath("//h1[@class='username']")
+    	if(len(ti)==0):
+    		print(response.meta['name']+"读取失败，重新读取")
+    		req2 = scrapy.Request(url=response.url,callback=self.parse3,errback=self.errback,dont_filter = True)
+    		req2.meta['useragent']=random.choice(self.agent)
+    		req2.meta['cookie']=self.cookie
+    		req2.meta['name']=response.meta['name']
+    		req2.meta['time']='3'
+    		req2.meta['page']=1
+    		req2.meta['count']=0
+    		req2.meta['t_id']=response.meta['t_id']
+    		yield req2
+    	else:
+    		if(response.meta['time']=='3'):
+	    		title = response.xpath("//h1[@class='username']/text()").extract()[0]
+	    		print("title="+title)
+	    		oldurl = response.url
+	    		t_id = oldurl[oldurl.find("/p/")+3:oldurl.find("/em")]
+	    		print("t_id="+t_id)
+	    		para = response.xpath("//table[@class='tb_counter']/tbody/tr/td")
+	    		read_c=""
+	    		dic_c=""
+	    		fans_c=""
+	    		#print(para)
+	    		for i,p in enumerate(para):
+	    			np = p.xpath(".//strong/text()").extract()[0]
+	    			np = np.replace(" ","")
+	    			np = np.replace("\t","")
+	    			np = np.replace("\n","")
+	    			if(i==0):
+	    				read_c = np
+	    				print("read_c="+read_c)
+	    			elif(i==1):
+	    				dic_c = np
+	    				print("dic_c="+dic_c)
+	    			elif(i==2):
+	    				fans_c = np
+	    				print("fans_c="+fans_c)
+	    			else:
+	    				print("不知道的属性")
+	    		host = response.xpath("//div[@class='title W_fb W_autocut ']/a")
+	    		host_n = host[0].xpath("./@title").extract()[0]
+	    		print("host_name="+host_n)
+	    		host_id = host[0].xpath("./@usercard").extract()[0]
+	    		host_id = host_id[host_id.find("id=")+3:host_id.find("&type")]
+	    		print("host_id="+host_id)
+	    		con = response.xpath("//div[@id='Pl_Third_Inline__3']/div/div/div")
+	    		print(con)
+	    		content = ""
+	    		if(len(con)==0):
+	    			print("没有话题导语")
+	    		else:
+	    			print("有导语：",end="")
+	    			content = con.xpath("string(.)").extract()[0]
+	    			content = content.replace("\t","")
+	    			content = content.replace("\n","")
+	    			print(content)
+	    		fans_url = response.xpath("//a[@class='t_link S_txt1']/@href").extract()[0]
+	    		print("fans_url="+fans_url)
+	    		freq = scrapy.Request(url="https:"+fans_url,callback=self.parse4,errback=self.errback)
+	    		freq.meta['useragent']=random.choice(self.agent)
+	    		freq.meta['cookie']=self.cookie
+	    		freq.meta['name']=response.meta['name']
+	    		freq.meta['time']='5'
+	    		freq.meta['page']=1
+	    		freq.meta['count']=0
+	    		freq.meta['t_id']=t_id
+	    		#yield freq
+
+	    	tps = response.xpath("//div[@class='WB_cardwrap WB_feed_type S_bg2 WB_feed_like']")
+	    	tps2 = response.xpath("//div[@class='WB_cardwrap WB_feed_type S_bg2 WB_feed_vipcover WB_feed_like']")
+	    	print("tps=",len(tps))
+	    	print("tps2=",len(tps2))
+	    	tps = tps+tps2
+	    	print("tps=",len(tps))
+	    	for i,tp in enumerate(tps):
+	    		u_id = tp.xpath("./@tbinfo").extract()[0]
+	    		u_id = u_id.replace("\n","")
+	    		print("u_id="+u_id+"\t",end="")
+	    		u_name = tp.xpath(".//a[@class='W_f14 W_fb S_txt1']/@title").extract()[0]
+	    		u_name = u_name.replace("\n","")
+	    		print("u_name="+u_name+"\t",end="")
+	    		tp_id = tp.xpath("./@mid").extract()[0]
+	    		tp_id = tp_id.replace("\n","")
+	    		print("tp_id="+tp_id+"\t",end="")
+	    		time = tp.xpath(".//a[@node-type='feed_list_item_date']/@title").extract()[0]
+	    		time = time.replace("\n","")
+	    		print("time="+time+"\t",end="")
+	    		frs = tp.xpath(".//div[@class='WB_from S_txt2']/a")
+	    		#print(frs)
+	    		if(len(frs)==0 or len(frs)==1):
+	    			fr = "没有来源"
+	    		else:
+	    			fr = frs[1].xpath("string(.)").extract()[0]
+	    			fr = fr.replace("\n","")
+	    		print("fr="+fr+"\t")
+	    	#判断有无下一页或者是否达到五百条
+	    	nextpages = response.xpath("//a[@class='page next S_txt1 S_line1']/@href")
+	    	if(len(nextpages)==0):
+	    		print("没有下一页了")
+	    	else:
+	    		response.meta['count']=response.meta['count']+len(tps)
+	    		if(response.meta['count']>=50):
+	    			print(response.meta['name']+"已经五百条了")
+	    		else:
+	    			nextpage=response.xpath("//a[@class='page next S_txt1 S_line1']/@href").extract()[0]
+	    			nextpage="https://weibo.com"+nextpage
+	    			req = scrapy.Request(url=nextpage,callback=self.parse3,errback=self.errback)
+	    			req.meta['useragent']=random.choice(self.agent)
+	    			req.meta['cookie']=self.cookie
+	    			req.meta['name']=response.meta['name']
+	    			req.meta['time']='4'
+	    			req.meta['page']=response.meta['page']+1
+	    			req.meta['count']=response.meta['count']
+	    			req.meta['t_id']=t_id
+	    			yield req
+			
+
+    		
+
+    '''	
     	print("热搜榜爬取结束")
     	title = response.xpath("//tbody/tr")
     	for i,t in enumerate(title):
@@ -128,7 +329,7 @@ class WeiboSpider(scrapy.Spider):
     		fans_c = response.xpath("//a[@class='t_link S_txt1']/strong/text()").extract()[0]
     	print("fans_c="+fans_c)
 
-    	
+	'''    	
 
 
 
