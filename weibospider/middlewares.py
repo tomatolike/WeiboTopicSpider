@@ -65,7 +65,7 @@ class WeibospiderSpiderMiddleware(object):
 class PhantomJSMiddleware(object):
     @classmethod
     def process_request(cls, request, spider):
-        print("start!"+request.meta['name'],request.meta['page'])
+        print("start"+request.meta['name']+" time:"+request.meta['time']+" page:",request.meta['page'])
 
         #获取第一部分的内容
         cap = dict(DesiredCapabilities.PHANTOMJS)

@@ -53,19 +53,16 @@ class WeiboSpider(scrapy.Spider):
 
 
     def start_requests(self):
-    	start_urls = 'https://d.weibo.com/100803?from=page_huati_tab'
-    	req = scrapy.Request(url=start_urls,callback=self.parse,errback=self.errback)
+    	start_urls = 'https://weibo.com/p/1008088c1c0f3885a9122634cd36f678a09b9a/followlist'
+    	req = scrapy.Request(url=start_urls,callback=self.parse4,errback=self.errback)
     	req.meta['useragent']=random.choice(self.agent)
     	req.meta['cookie']=self.cookie
     	req.meta['name']="话题榜首页"
-    	req.meta['time']='1'
-    	req.meta['page']=-1
-    	req.meta['count']=-1
-    	req.meta['t_id']=""
+    	req.meta['time']='5'
+    	req.meta['page']=1
+    	req.meta['count']=0
+    	req.meta['t_id']="1008088c1c0f3885a9122634cd36f678a09b9a"
     	yield req
-
-    def parse4(self, response):
-    	print("4")
 
     def parse(self, response):
     	print("开始处理话题榜")
@@ -139,9 +136,9 @@ class WeiboSpider(scrapy.Spider):
     		req2.meta['useragent']=random.choice(self.agent)
     		req2.meta['cookie']=self.cookie
     		req2.meta['name']=response.meta['name']
-    		req2.meta['time']='3'
-    		req2.meta['page']=1
-    		req2.meta['count']=0
+    		req2.meta['time']=response.meta['time']
+    		req2.meta['page']=response.meta['page']
+    		req2.meta['count']=response.meta['count']
     		req2.meta['t_id']=response.meta['t_id']
     		yield req2
     	else:
@@ -199,7 +196,7 @@ class WeiboSpider(scrapy.Spider):
 	    		freq.meta['page']=1
 	    		freq.meta['count']=0
 	    		freq.meta['t_id']=t_id
-	    		#yield freq
+	    		yield freq
 
 	    	tps = response.xpath("//div[@class='WB_cardwrap WB_feed_type S_bg2 WB_feed_like']")
 	    	tps2 = response.xpath("//div[@class='WB_cardwrap WB_feed_type S_bg2 WB_feed_vipcover WB_feed_like']")
@@ -210,6 +207,7 @@ class WeiboSpider(scrapy.Spider):
 	    	for i,tp in enumerate(tps):
 	    		u_id = tp.xpath("./@tbinfo").extract()[0]
 	    		u_id = u_id.replace("\n","")
+	    		u_id = u_id[u_id.find("id=")+3:len(u_id)]
 	    		print("u_id="+u_id+"\t",end="")
 	    		u_name = tp.xpath(".//a[@class='W_f14 W_fb S_txt1']/@title").extract()[0]
 	    		u_name = u_name.replace("\n","")
@@ -248,90 +246,57 @@ class WeiboSpider(scrapy.Spider):
 	    			req.meta['count']=response.meta['count']
 	    			req.meta['t_id']=t_id
 	    			yield req
+
+    def parse4(self, response):
+    	#先判断是否读取成功
+    	lis = response.xpath("//ul[@class='follow_list']/li")
+    	count = len(lis)
+    	if(count==0):
+    		print(response.meta['name']+"粉丝列表读取失败，重新读取")
+    		req2 = scrapy.Request(url=response.url,callback=self.parse4,errback=self.errback,dont_filter = True)
+    		req2.meta['useragent']=random.choice(self.agent)
+    		req2.meta['cookie']=self.cookie
+    		req2.meta['name']=response.meta['name']
+    		req2.meta['time']='5'
+    		req2.meta['page']=response.meta['page']
+    		req2.meta['count']=response.meta['count']
+    		req2.meta['t_id']=response.meta['t_id']
+    		yield req2
+    	else:
+    		i=1
+    		for li in lis:
+    			u_name = li.xpath(".//a[@class='S_txt1']/@title").extract()[0]
+    			print("u_name="+u_name,end="\t")
+    			u_id = li.xpath(".//a[@class='S_txt1']/@usercard").extract()[0]
+    			u_id = u_id[u_id.find("id=")+3:u_id.find("&refer")]
+    			print("u_id="+u_id,end="\t")
+    			rank_n = i+response.meta['count']
+    			i=i+1
+    			print("rank_n=",rank_n)
+    		print("判断下一页")
+    		nextpages = response.xpath("//a[@class='page next S_txt1 S_line1']")
+    		print(len(nextpages))
+    		if(len(nextpages)==0):
+    			print(response.meta['name']+"粉丝列表最后一页了")
+    		else:
+    			response.meta['count']=response.meta['count']+count
+    			print(response.meta['count'])
+    			if(response.meta['count']>=100):
+    				print(response.meta['name']+"粉丝已经100人了")
+    			else:
+    				nextpage = response.xpath("//a[@class='page next S_txt1 S_line1']/@href").extract()[0]
+    				print(nextpage)
+    				url = "https://weibo.com"+nextpage
+    				req = scrapy.Request(url=url,callback=self.parse4,errback=self.errback)
+    				req.meta['useragent']=random.choice(self.agent)
+    				req.meta['cookie']=self.cookie
+    				req.meta['name']=response.meta['name']
+    				req.meta['time']='5'
+    				req.meta['page']=response.meta['page']+1
+    				req.meta['count']=response.meta['count']
+    				req.meta['t_id']=response.meta['t_id']
+    				yield req
+
 			
-
-    		
-
-    '''	
-    	print("热搜榜爬取结束")
-    	title = response.xpath("//tbody/tr")
-    	for i,t in enumerate(title):
-    		if i == 20:
-    			break
-    		name = t.xpath("./td[@class='td_02']//a/text()").extract()[0]
-    		#print("name="+name)
-    		#print(name)
-    		length = name.find("...")
-    		if(length!=-1):
-    			name=name[0:length]
-    		name=name.replace(' ','')
-    		print(name)
-    		url = t.xpath("./td[@class='td_02']//a/@href").extract()[0]
-    		url = "http://s.weibo.com"+url
-    		req = scrapy.Request(url, callback=self.parse2)
-    		req.meta['name']=name
-    		req.headers['User_Agent']=random.choice(self.agent)
-    		yield req
-
-    def parse2(self, response):
-    	print("success=",self.success)
-    	if(self.success<10):
-    		on = response.meta['name']
-    		#print(on)
-    		topic = response.xpath("//p[@class='comment_txt']")
-    		#print("len=",len(topic))
-    		for i,t in enumerate(topic):
-    			#print("i=",i)
-    			name = t.xpath("./a[@class='a_topic W_linkb']/em/text()")
-    			if(len(name)==0):
-    				continue
-    			name = t.xpath("./a[@class='a_topic W_linkb']/em/text()").extract()[0]
-    			name=name.replace(' ','')
-    			#print(name)
-    			#print(name.find(on))
-    			if(name.find(on)==-1):
-    				continue
-    			url = t.xpath("./a[@class='a_topic W_linkb']/@href").extract()[0]
-    			print(name)
-    			print(url)
-    			self.success=self.success+1
-    			print("二级搜索已完成",self.success)
-    			url = "http:"+url
-    			req=scrapy.Request(url,callback=self.parse3)
-    			req.meta['name']=name
-    			req.headers['User_Agent']=random.choice(self.agent)
-    			yield req
-    			break
-
-    def parse3(self, response):
-    	print(response.meta['name'])
-    	title = response.xpath("//dev[@class='pf_username clearfix']/h1/text()")
-    	if(len(title)==0):
-    		print("没有title，出错了")
-    	else:
-    		title= response.xpath("//dev[@class='pf_username clearfix']/h1/text()").extract()[0]
-    	print("title="+title)
-    	
-    	fans_url = response.xpath("//a[@class='t_link S_txt1']/@href")
-    	if(len(fans_url)==0):
-    		print("没有fans，出错了")
-    	else:
-    		fans_url = response.xpath("//a[@class='t_link S_txt1']/@href").extract()[0]
-    	print("fans_url="+fans_url)
-    	
-    	t_id = fans_url[(fans_url.find("/p/")+3):(fans_url.find("/followlist"))]
-    	print("t_id="+t_id)
-    	
-    	fans_c = response.xpath("//a[@class='t_link S_txt1']/strong/text()")
-    	if(len(fans_c==0)):
-    		print("没有fans数量，出错了")
-    	else:	
-    		fans_c = response.xpath("//a[@class='t_link S_txt1']/strong/text()").extract()[0]
-    	print("fans_c="+fans_c)
-
-	'''    	
-
-
-
     def errback(self, failure):
     	print(failure)
