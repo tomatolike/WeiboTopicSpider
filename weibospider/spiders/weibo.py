@@ -7,7 +7,7 @@ import random
 
 class WeiboSpider(scrapy.Spider):
 	name = 'weibo'
-	allowed_domains = ['weibo.com']
+	allowed_domains = ['weibo.com','weibo.cn']
 	success=0
 
 	def __init__(self):
@@ -15,6 +15,7 @@ class WeiboSpider(scrapy.Spider):
 		self.tlist=[]
 		self.tplist=[]
 		self.userlist=[]
+		self.clist=[]
 		self.agent=self.user_agent=[
 	"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
 	"Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Acoo Browser; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)",
@@ -56,15 +57,15 @@ class WeiboSpider(scrapy.Spider):
 
 
 	def start_requests(self):
-		start_urls = 'https://m.weibo.cn/api/comments/show?id=4186246491993523&page=1'
-		req = scrapy.Request(url=start_urls,callback=self.parse5,errback=self.errback)
+		start_urls = 'https://d.weibo.com/100803?from=page_huati_tab'
+		req = scrapy.Request(url=start_urls,callback=self.parse,errback=self.errback)
 		req.meta['useragent']=random.choice(self.agent)
 		req.meta['cookie']=self.cookie
 		req.meta['name']="话题榜首页"
-		req.meta['time']='6'
-		req.meta['page']=1
-		req.meta['count']=0
-		req.meta['t_id']="100808dde32277a73e6c25bd90117cfaf11143"
+		req.meta['time']='1'
+		req.meta['page']=-1
+		req.meta['count']=-1
+		req.meta['t_id']=""
 		yield req
 
 	def parse(self, response):
@@ -84,7 +85,7 @@ class WeiboSpider(scrapy.Spider):
 			yield req2
 		else:
 			for i,li in enumerate(lis):
-				if(i==1):
+				if(i==10):
 					break
 				title = li.xpath(".//a[@target='_blank']/text()").extract()[0]
 				title = title.replace(" ","")
@@ -147,11 +148,14 @@ class WeiboSpider(scrapy.Spider):
 			yield req2
 		else:
 			if(response.meta['time']=='3'):
+				newtopic = BaseinfoItem()
 				title = response.xpath("//h1[@class='username']/text()").extract()[0]
 				self.tlist.append(title)
+				newtopic['name'] = title
 				print("title="+title)
 				oldurl = response.url
 				t_id = oldurl[oldurl.find("/p/")+3:oldurl.find("/em")]
+				newtopic['t_id'] = t_id
 				print("t_id="+t_id)
 				para = response.xpath("//table[@class='tb_counter']/tbody/tr/td")
 				read_c=""
@@ -165,23 +169,28 @@ class WeiboSpider(scrapy.Spider):
 					np = np.replace("\n","")
 					if(i==0):
 						read_c = np
+						newtopic['read_c']=read_c
 						print("read_c="+read_c)
 					elif(i==1):
 						dic_c = np
+						newtopic['dis_c']=dis_c
 						print("dic_c="+dic_c)
 					elif(i==2):
 						fans_c = np
+						newtopic['fans_c']=fans_c
 						print("fans_c="+fans_c)
 					else:
 						print("不知道的属性")
 				host = response.xpath("//div[@class='title W_fb W_autocut ']/a")
 				host_n = host[0].xpath("./@title").extract()[0]
+				newtopic['host_n'] = host_n
 				print("host_name="+host_n)
 				host_id = host[0].xpath("./@usercard").extract()[0]
 				host_id = host_id[host_id.find("id=")+3:host_id.find("&type")]
+				newtopic['host_id'] = host_id
 				print("host_id="+host_id)
 				con = response.xpath("//div[@id='Pl_Third_Inline__3']/div/div/div")
-				print(con)
+				#print(con)
 				content = ""
 				if(len(con)==0):
 					print("没有话题导语")
@@ -191,8 +200,10 @@ class WeiboSpider(scrapy.Spider):
 					content = content.replace("\t","")
 					content = content.replace("\n","")
 					print(content)
+				newtopic['content']=content
+				yield newtopic
 				fans_url = response.xpath("//a[@class='t_link S_txt1']/@href").extract()[0]
-				print("fans_url="+fans_url)
+				#print("fans_url="+fans_url)
 				freq = scrapy.Request(url="https:"+fans_url,callback=self.parse4,errback=self.errback)
 				freq.meta['useragent']=random.choice(self.agent)
 				freq.meta['cookie']=self.cookie
@@ -201,7 +212,7 @@ class WeiboSpider(scrapy.Spider):
 				freq.meta['page']=1
 				freq.meta['count']=0
 				freq.meta['t_id']=t_id
-				#yield freq
+				yield freq
 
 			tps = response.xpath("//div[@class='WB_cardwrap WB_feed_type S_bg2 WB_feed_like']")
 			tps2 = response.xpath("//div[@class='WB_cardwrap WB_feed_type S_bg2 WB_feed_vipcover WB_feed_like']")
@@ -220,9 +231,7 @@ class WeiboSpider(scrapy.Spider):
 				print("u_name="+u_name+"\t",end="")
 				tp_id = tp.xpath("./@mid").extract()[0]
 				tp_id = tp_id.replace("\n","")
-				if(tp_id not in self.tplist):
-					self.tplist.append(tp_id)
-					counter=counter+1
+				
 				print("tp_id="+tp_id+"\t",end="")
 				time = tp.xpath(".//a[@node-type='feed_list_item_date']/@title").extract()[0]
 				time = time.replace("\n","")
@@ -275,26 +284,37 @@ class WeiboSpider(scrapy.Spider):
 				req.meta['page']=1
 				req.meta['count']=0
 				req.meta['t_id']=t_id
+				req.meta['tp_id']=tp_id
+				yield req
 				#判断是否是转发
 				mark = tp.xpath(".//div[@class='WB_feed_expand']")
 				if(len(mark)==0):
 					print("不是转发")
 				else:
 					print("是转发")
+					newypost = Topic_postItem()
+					y_id = mark.xpath(".//div[@class='WB_info']//a[@node-type='feed_list_originNick']/@suda-uatrack").extract()[0]
+					y_id = y_id[y_id.find("nick:")+5:len(y_id)]
+					newypost['tp_id'] = y_id
+					print("y_id = "+y_id,end="\t")
 					yu_id = mark.xpath(".//div[@class='WB_info']//a[@node-type='feed_list_originNick']/@usercard").extract()[0]
 					yu_id =yu_id[yu_id.find("id=")+3:yu_id.find("&refer")]
+					newypost['u_id'] = yu_id
 					print("yu_id = "+yu_id,end="\t")
 					yu_name = mark.xpath(".//div[@class='WB_info']//a[@node-type='feed_list_originNick']/@title").extract()[0]
 					yu_name = yu_name.replace(" ","")
 					yu_name = yu_name.replace("\n","")
+					newypost['u_name'] = yu_name
 					print("yu_name = "+yu_name,end="\t")
 					y_time = mark.xpath(".//a[@node-type='feed_list_item_date']/@title").extract()[0]
 					y_time = y_time.replace(" ","")
 					y_time = y_time.replace("\n","")
+					newypost['time'] = y_time
 					print("y_time ="+y_time,end="\t")
 					y_fr = mark.xpath(".//a[@action-type='app_source']/text()").extract()[0]
 					y_fr = y_fr.replace(" ","")
 					y_fr = y_fr.replace("\n","")
+					newypost['fr'] = y_fr
 					print("y_fr ="+y_fr,end="\t")
 					y_de = mark.xpath(".//a[@bpfilter='page_frame']")
 					y_z_c = y_de[0].xpath("string(.)").extract()[0]
@@ -311,15 +331,43 @@ class WeiboSpider(scrapy.Spider):
 						y_lk_c.replace("赞","")
 					y_lk_c = y_lk_c.replace(" ","")
 					y_lk_c = y_lk_c.replace("\n","")
+					newypost['comment_c'] = y_c_c
+					newypost['trans_c'] = y_z_c
+					newypost['zan_c'] = y_lk_c
 					print("y_z_c="+y_z_c+"\ty_c_c="+y_c_c+"\ty_lk_c="+y_lk_c)
+					newypost['zhuan_id'] = "No"
+					newypost['content=']""
+					newypost['t_id']=""
+					if(y_id not in self.tplist):
+						self.tplist.append(y_id)
+						yield newypost
 
+				if(tp_id not in self.tplist):
+					self.tplist.append(tp_id)
+					counter=counter+1
+					newpost = Topic_postItem()
+					newpost['t_id'] = t_id
+					newpost['tp_id'] = tp_id
+					newpost['u_id'] = u_id
+					newpost['u_name'] = u_name
+					newpost['time'] = time
+					newpost['fr'] = fr
+					newpost['comment_c'] = c_c
+					newpost['trans_c'] = z_c
+					newpost['zan_c'] = lk_c
+					if(len(mark)==0):
+						newpost['zhuan_id'] = "No"
+					else:
+						newpost['zhuan_id'] = y_id
+					content=""
+					yield newpost
 			#判断有无下一页或者是否达到五百条
 			nextpages = response.xpath("//a[@class='page next S_txt1 S_line1']")
 			if(len(nextpages)==0):
 				print("没有下一页了")
 			else:
 				response.meta['count']=response.meta['count']+counter
-				if(response.meta['count']>=100):
+				if(response.meta['count']>=500):
 					print(response.meta['name']+"已经",response.meta['count'],"条了")
 				else:
 					print("现有条数=",response.meta['count'])
@@ -353,14 +401,22 @@ class WeiboSpider(scrapy.Spider):
 		else:
 			i=1
 			for li in lis:
+				newfans = Fans_listItem()
 				u_name = li.xpath(".//a[@class='S_txt1']/@title").extract()[0]
+				newfans['u_name'] = u_name
 				print("u_name="+u_name,end="\t")
 				u_id = li.xpath(".//a[@class='S_txt1']/@usercard").extract()[0]
 				u_id = u_id[u_id.find("id=")+3:u_id.find("&refer")]
+				newfans['u_id'] = u_id
 				print("u_id="+u_id,end="\t")
 				rank_n = i+response.meta['count']
 				i=i+1
+				newfans['rank_n'] = rank_n
 				print("rank_n=",rank_n)
+				newfans['t_id'] = response.meta['t_id']
+				if(u_id not in self.userlist):
+					self.userlist.append(u_id)
+					yield newfans
 			print("判断下一页")
 			nextpages = response.xpath("//a[@class='page next S_txt1 S_line1']")
 			print(len(nextpages))
@@ -368,9 +424,8 @@ class WeiboSpider(scrapy.Spider):
 				print(response.meta['name']+"粉丝列表最后一页了")
 			else:
 				response.meta['count']=response.meta['count']+count
-				print(response.meta['count'])
 				if(response.meta['count']>=100):
-					print(response.meta['name']+"粉丝已经100人了")
+					print(response.meta['name']+"粉丝已经",response.meta['count'],"人了")
 				else:
 					nextpage = response.xpath("//a[@class='page next S_txt1 S_line1']/@href").extract()[0]
 					print(nextpage)
@@ -386,48 +441,92 @@ class WeiboSpider(scrapy.Spider):
 					yield req
 
 	def parse5(self, response):
+		print("评论获取")
 		x = response
-		a = x.xpath("//pre/text()").extract()[0]
-		a = a.encode("utf-8")
-		file = open("new2.txt","wb")
-		file.write(a)
-		file.close()
-		file = open("new2.txt","r")
-		a = file.read()
-		file.close()
-		kill = a.find("\\ud")
-		while kill!=-1:
-			print("kill!")
-			a = a[0:kill]+a[kill+6:len(a)]
+		b = x.xpath("//pre/text()")
+		if(len(b)==0):
+			print("评论获取失败，重新读取")
+			req2 = scrapy.Request(url=response.url,callback=self.parse5,errback=self.errback,dont_filter = True)
+			req2.meta['useragent']=random.choice(self.agent)
+			req2.meta['cookie']=self.cookie
+			req2.meta['name']=response.meta['name']
+			req2.meta['time']='6'
+			req2.meta['page']=response.meta['page']
+			req2.meta['count']=response.meta['count']
+			req2.meta['t_id']=response.meta['t_id']
+			req2.meta['tp_id']=response.meta['tp_id']
+			yield req2
+		else:
+			a = x.xpath("//pre/text()").extract()[0]
+			a = a.encode("utf-8")
+			file = open("new2.txt","wb")
+			file.write(a)
+			file.close()
+			file = open("new2.txt","r")
+			a = file.read()
+			file.close()
 			kill = a.find("\\ud")
-		a = a.encode("utf-8").decode("unicode-escape")
-		i = 0
-		counter=0
-		while 1:
-			#print(i)
-			i = a.find("\"id\"",i)
-			if(i==-1):
-				break
-			idd = a[a.find("\"id\"",i)+5:a.find(",\"created_at",i)]
-			print("id="+idd,end="\t\t")
-			counter=counter+1
-			creat = a[a.find("\"created_at\"",i)+14:a.find("\",\"source",i)]
-			print("created_at="+creat,end="\t\t")
-			source = a[a.find("\"source\"",i)+10:a.find("\",\"user",i)]
-			print("source="+source,end="\t\t")
-			i = a.find("\"user\"",i)
-			if(i==-1):
-				break
-			u_id = a[a.find("\"id\"",i)+5:a.find(",\"screen_name",i)]
-			print("u_id="+u_id,end="\t\t")
-			u_name = a[a.find("\"screen_name\"",i)+15:a.find("\",\"profile_image_url",i)]
-			print("u_name="+u_name,end="\t\t")
-			text = a[a.find("\"text\"",i)+8:a.find("\",\"like_counts",i)]
-			#print("text="+text)
-			print("")
-			i=a.find("\"text\"",i)
-			if(i==-1):
-				break
-		print("over=",counter)
+			while kill!=-1:
+				print("kill!")
+				a = a[0:kill]+a[kill+6:len(a)]
+				kill = a.find("\\ud")
+			a = a.encode("utf-8").decode("unicode-escape")
+			i = 0
+			counter=0
+			while 1:
+				#print(i)
+				i = a.find("\"id\"",i)
+				if(i==-1):
+					break
+				idd = a[a.find("\"id\"",i)+5:a.find(",\"created_at",i)]
+				print("id="+idd,end="\t\t")
+				counter=counter+1
+				creat = a[a.find("\"created_at\"",i)+14:a.find("\",\"source",i)]
+				print("created_at="+creat,end="\t\t")
+				source = a[a.find("\"source\"",i)+10:a.find("\",\"user",i)]
+				print("source="+source,end="\t\t")
+				i = a.find("\"user\"",i)
+				if(i==-1):
+					break
+				u_id = a[a.find("\"id\"",i)+5:a.find(",\"screen_name",i)]
+				print("u_id="+u_id,end="\t\t")
+				u_name = a[a.find("\"screen_name\"",i)+15:a.find("\",\"profile_image_url",i)]
+				print("u_name="+u_name,end="\t\t")
+				text = a[a.find("\"text\"",i)+8:a.find("\",\"like_counts",i)]
+				#print("text="+text)
+				print("")
+				i=a.find("\"text\"",i)
+				if(i==-1):
+					break
+				if(idd not in self.clist):
+					self.clist.append(idd)
+					newcom = Comment_listItem()
+					newcom['tp_id'] = response.meta['tp_id']
+					newcom['comment_id'] = idd
+					newcom['u_id'] = u_id
+					newcom['u_name'] = u_name
+					newcom['content'] = ""
+					yield newcom
+			response.meta['count']=response.meta['count']+counter
+			if(response.meta['count']>50):
+				print("评论已达到",response.meta['count'],"条")
+			else:
+				if(counter==0):
+					print("已到达尾页")
+				else:
+					print("查看下一页评论")
+					url = "https://m.weibo.cn/api/comments/show?id="+response.meta['tp_id']+"&page="+str(response.meta['page']+1)
+					req = scrapy.Request(url=url,callback=self.parse5,errback=self.errback)
+					req.meta['useragent']=random.choice(self.agent)
+					req.meta['cookie']=self.cookie
+					req.meta['name']=response.meta['name']
+					req.meta['time']='6'
+					req.meta['page']=response.meta['page']+1
+					req.meta['count']=response.meta['count']
+					req.meta['t_id']=response.meta['t_id']
+					req.meta['tp_id']=response.meta['tp_id']
+					yield req
+
+
 	def errback(self, failure):
 		print(failure)

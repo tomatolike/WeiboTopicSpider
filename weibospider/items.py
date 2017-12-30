@@ -40,7 +40,7 @@ class Topic_postItem(scrapy.Item):
 	content = scrapy.Field()
 
 class Comment_listItem(scrapy.Item):
-	t_id = scrapy.Field()
+	tp_id = scrapy.Field()
 	comment_id = scrapy.Field()
 	u_id = scrapy.Field()
 	u_name = scrapy.Field()

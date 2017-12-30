@@ -13,7 +13,7 @@ class WeibospiderPipeline(object):
     	cursor=db.cursor()
     	#If it is baseinfo
     	if isinstance(item,BaseinfoItem):
-    		sql = "insert into Baseinfo(id,name,read_c,dis_c,fans_c,host_n,host_id,content) values(\"%s\",\"%s\",%d,%d,%d,%d,\"%s\",\"%s\");"
+    		sql = "insert into Baseinfo(id,name,read_c,dis_c,fans_c,host_n,host_id,content) values(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");"
     		cursor.execute(sql,item['t_id'],item['name'],item['read_c'],item['dis_c'],item['fans_c'],item['host_n'],item['host_id'],item['content'])
     		db.commit()
     	#If it is fans_list
@@ -23,11 +23,11 @@ class WeibospiderPipeline(object):
     		db.commit()
     	#If it is topic_post
     	elif isinstance(item,Topic_postItem):
-    		sql = "insert into Baseinfo(t_id,tp_id,u_name,u_id,time,fr,comment_c,trans_c,zan_c,zhuan_id,content) values(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d,%d,%d,\"%s\",\"%s\");"
+    		sql = "insert into Topic_postItem(t_id,tp_id,u_name,u_id,t_me,fr,comment_c,trans_c,zan_c,zhuan_id,content) values(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");"
     		cursor.execute(sql,item['t_id'],item['tp_id'],item['u_name'],item['u_id'],item['time'],item['fr'],item['comment_c'],item['trans_c'],item['zan_c'],item['zhuan_id'],item['content'])
     		db.commit()
     	elif isinstance(item,Comment_listItem):
-    		sql = "insert into Baseinfo(tp_id,comment_id,u_id,u_name,content) values(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");"
+    		sql = "insert into Comment_listItem(tp_id,comment_id,u_id,u_name,content) values(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");"
     		cursor.execute(sql,item['tp_id'],item['comment_id'],item['u_id'],item['u_name'],item['content'])
     		db.commit()
     	else:
