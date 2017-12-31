@@ -67,7 +67,7 @@ DOWNLOADER_MIDDLEWARES = {
 ITEM_PIPELINES = {
     'weibospider.pipelines.WeibospiderPipeline': 300,
 }
-
+LOG_FILE="log.txt"
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html
 #AUTOTHROTTLE_ENABLED = True

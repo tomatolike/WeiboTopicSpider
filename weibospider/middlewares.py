@@ -97,7 +97,7 @@ class PhantomJSMiddleware(object):
                     cap["phantomjs.page.settings.userAgent"]= request.meta['useragent']
                     driver = webdriver.PhantomJS(desired_capabilities=cap)
                     driver.get("https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain="+request.meta['t_id'][0:6]+"&from=page_huati_rcd_more&pagebar=0&tab=emceercd&current_page=1&since_id=14&pl_name=Pl_Third_App__46&id="+request.meta['t_id']+"&script_uri=/p/"+request.meta['t_id']+"/emceercd&feed_type=1&page=1&pre_page=1&domain_op="+request.meta['t_id'][0:6])
-                    print("等待两秒")
+                    print("等待两秒"+"https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain="+request.meta['t_id'][0:6]+"&from=page_huati_rcd_more&pagebar=0&tab=emceercd&current_page=1&since_id=14&pl_name=Pl_Third_App__46&id="+request.meta['t_id']+"&script_uri=/p/"+request.meta['t_id']+"/emceercd&feed_type=1&page=1&pre_page=1&domain_op="+request.meta['t_id'][0:6])
                     time.sleep(2)
                     content2 = driver.page_source.encode('utf-8')
                     driver.quit()
@@ -123,6 +123,7 @@ class PhantomJSMiddleware(object):
                     content2 = content2.replace('"}',"")
                     like = content2.replace('\\/',"/")
                     content2 = like.encode('utf-8')
+                    #print("like="+like+"=likeend")
                     part3 = like.find("node-type=\"lazyload\"")
                     
                     #判断是否有第三部分的内容

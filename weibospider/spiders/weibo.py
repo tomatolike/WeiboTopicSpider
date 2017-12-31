@@ -173,7 +173,7 @@ class WeiboSpider(scrapy.Spider):
 						print("read_c="+read_c)
 					elif(i==1):
 						dic_c = np
-						newtopic['dis_c']=dis_c
+						newtopic['dis_c']=dic_c
 						print("dic_c="+dic_c)
 					elif(i==2):
 						fans_c = np
@@ -182,13 +182,17 @@ class WeiboSpider(scrapy.Spider):
 					else:
 						print("不知道的属性")
 				host = response.xpath("//div[@class='title W_fb W_autocut ']/a")
-				host_n = host[0].xpath("./@title").extract()[0]
-				newtopic['host_n'] = host_n
-				print("host_name="+host_n)
-				host_id = host[0].xpath("./@usercard").extract()[0]
-				host_id = host_id[host_id.find("id=")+3:host_id.find("&type")]
-				newtopic['host_id'] = host_id
-				print("host_id="+host_id)
+				nhost = host[0].xpath("./@title")
+				if(len(nhost)==0):
+					newtopic['host_n']="没有主持人"
+				else:	
+					host_n = host[0].xpath("./@title").extract()[0]
+					newtopic['host_n'] = host_n
+					print("host_name="+host_n)
+					host_id = host[0].xpath("./@usercard").extract()[0]
+					host_id = host_id[host_id.find("id=")+3:host_id.find("&type")]
+					newtopic['host_id'] = host_id
+					print("host_id="+host_id)
 				con = response.xpath("//div[@id='Pl_Third_Inline__3']/div/div/div")
 				#print(con)
 				content = ""
@@ -200,7 +204,7 @@ class WeiboSpider(scrapy.Spider):
 					content = content.replace("\t","")
 					content = content.replace("\n","")
 					print(content)
-				newtopic['content']=content
+				#newtopic['content']=content
 				yield newtopic
 				fans_url = response.xpath("//a[@class='t_link S_txt1']/@href").extract()[0]
 				#print("fans_url="+fans_url)
@@ -336,7 +340,7 @@ class WeiboSpider(scrapy.Spider):
 					newypost['zan_c'] = y_lk_c
 					print("y_z_c="+y_z_c+"\ty_c_c="+y_c_c+"\ty_lk_c="+y_lk_c)
 					newypost['zhuan_id'] = "No"
-					newypost['content=']""
+					#newypost['content=']=""
 					newypost['t_id']=""
 					if(y_id not in self.tplist):
 						self.tplist.append(y_id)
@@ -505,7 +509,7 @@ class WeiboSpider(scrapy.Spider):
 					newcom['comment_id'] = idd
 					newcom['u_id'] = u_id
 					newcom['u_name'] = u_name
-					newcom['content'] = ""
+					#newcom['content'] = ""
 					yield newcom
 			response.meta['count']=response.meta['count']+counter
 			if(response.meta['count']>50):
