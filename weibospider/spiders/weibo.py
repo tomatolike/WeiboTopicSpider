@@ -53,7 +53,7 @@ class WeiboSpider(scrapy.Spider):
 	"Mozilla/5.0 (X11; U; Linux x86_64; zh-CN; rv:1.9.2.10) Gecko/20100922 Ubuntu/10.10 (maverick) Firefox/3.6.10",
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36",
 	]
-		self.cookie = "SINAGLOBAL=6682242679096.176.1508122383526; UM_distinctid=1601673940f681-01532d4f31f69d-17396d57-1aeaa0-160167394118cd; un=18867158066; UOR=www.ali213.net,widget.weibo.com,login.sina.com.cn; wvr=6; SSOLoginState=1514512916; _s_tentry=login.sina.com.cn; Apache=693521043815.8701.1514512919866; ULV=1514512919918:16:11:8:693521043815.8701.1514512919866:1514477518108; YF-Page-G0=00acf392ca0910c1098d285f7eb74a11; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFWF7E16egjecUNI.cWZTZr5JpX5KMhUgL.Fo-4e0-0SKnXeh-2dJLoIXnLxKBLB.zL122LxK-LBKBLBK.LxKBLB.zLB.BLxKML1-2L1hBLxKqL1-eLBKnLxK-LB-BL1K5LxKML12-L12zLxK-L12qLB-qt; ALF=1546145871; SCF=AgwbdQ3uYn_4CQM-iwkVmGqig7g6I5Y7ZxG5mWQ-PHEFEupVV4HXYMoxWQ7-1YZZMp2g1f86_OKxECThiwDfdIo.; SUB=_2A253Q2yADeRhGeNH6FcS9SbIyzmIHXVUOdlIrDV8PUNbmtBeLWqnkW9NStbCZRNTq5sppmDDftNFsBuPaoIFJrsv; SUHB=0LcSxFZ4vYaoCy"
+		self.cookie = "SINAGLOBAL=6682242679096.176.1508122383526; UM_distinctid=1601673940f681-01532d4f31f69d-17396d57-1aeaa0-160167394118cd; UOR=www.ali213.net,widget.weibo.com,login.sina.com.cn; YF-Ugrow-G0=56862bac2f6bf97368b95873bc687eef; _s_tentry=-; Apache=8829399666547.459.1514741582973; ULV=1514741582982:18:1:2:8829399666547.459.1514741582973:1514694990806; YF-V5-G0=2a21d421b35f7075ad5265885eabb1e4; YF-Page-G0=280e58c5ca896750f16dcc47ceb234ed; login_sid_t=7ff750e5636caccf913c272fefec1d0a; cross_origin_proto=SSL; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFWF7E16egjecUNI.cWZTZr5JpX5K2hUgL.Fo-4e0-0SKnXeh-2dJLoIXnLxKBLB.zL122LxK-LBKBLBK.LxKBLB.zLB.BLxKML1-2L1hBLxKqL1-eLBKnLxK-LB-BL1K5LxKML12-L12zLxK-L12qLB-qt; ALF=1546277610; SSOLoginState=1514741611; SCF=AgwbdQ3uYn_4CQM-iwkVmGqig7g6I5Y7ZxG5mWQ-PHEFs2LA8sy3E8gOtRe9Sjk4XHPsv4ttW9do-Jf-1wiWzHU.; SUB=_2A253TW87DeRhGeNH6FcS9SbIyzmIHXVUO8fzrDV8PUNbmtBeLW_CkW9NStbCZWmS5-9XWfLAEredU06j5NHKEP1q; SUHB=00xpL3_snuYj0r; un=18867158066; wvr=6; wb_cusLike_5935358405=N"
 
 
 	def start_requests(self):
@@ -91,7 +91,7 @@ class WeiboSpider(scrapy.Spider):
 				title = title.replace(" ","")
 				title = title.replace("\t","")
 				title = title.replace("\n","")
-				#print("name="+title)
+				print("name="+title)
 				url = li.xpath(".//a[@target='_blank']/@href").extract()[0]
 				#print(url)
 				req = scrapy.Request(url="https:"+url,callback=self.parse2,errback=self.errback)
@@ -108,7 +108,7 @@ class WeiboSpider(scrapy.Spider):
 		net = response.xpath("//a[@class='WB_cardmore WB_cardmore_noborder S_txt1 clearfix']/@href")
 		print(len(net))
 		if(len(net)==0):
-			print("wrong!")
+			print(response.meta['name']+"wrong!")
 			req2 = scrapy.Request(url=response.url,callback=self.parse2,errback=self.errback,dont_filter = True)
 			req2.meta['useragent']=random.choice(self.agent)
 			req2.meta['cookie']=self.cookie
@@ -120,7 +120,7 @@ class WeiboSpider(scrapy.Spider):
 			yield req2
 		else:
 			net = response.xpath("//a[@class='WB_cardmore WB_cardmore_noborder S_txt1 clearfix']/@href").extract()[0]
-			print(net)
+			print(response.meta['name']+":"+net)
 			req = scrapy.Request(url=net,callback=self.parse3,errback=self.errback)
 			url = net
 			req.meta['useragent']=random.choice(self.agent)
@@ -182,9 +182,11 @@ class WeiboSpider(scrapy.Spider):
 					else:
 						print("不知道的属性")
 				host = response.xpath("//div[@class='title W_fb W_autocut ']/a")
-				nhost = host[0].xpath("./@title")
-				if(len(nhost)==0):
+				print(len(host))
+				if(len(host)==0):
 					newtopic['host_n']="没有主持人"
+					newtopic['host_id']="没有主持人"
+					print("没有主持人")
 				else:	
 					host_n = host[0].xpath("./@title").extract()[0]
 					newtopic['host_n'] = host_n
@@ -198,13 +200,14 @@ class WeiboSpider(scrapy.Spider):
 				content = ""
 				if(len(con)==0):
 					print("没有话题导语")
+					content = "没有话题导语"
 				else:
 					print("有导语：",end="")
 					content = con.xpath("string(.)").extract()[0]
 					content = content.replace("\t","")
 					content = content.replace("\n","")
 					print(content)
-				#newtopic['content']=content
+				newtopic['content']=content
 				yield newtopic
 				fans_url = response.xpath("//a[@class='t_link S_txt1']/@href").extract()[0]
 				#print("fans_url="+fans_url)
@@ -229,6 +232,7 @@ class WeiboSpider(scrapy.Spider):
 				u_id = tp.xpath("./@tbinfo").extract()[0]
 				u_id = u_id.replace("\n","")
 				u_id = u_id[u_id.find("id=")+3:len(u_id)]
+				print(response.meta['name'],response.meta['count']+counter+1,":",end=" ")
 				print("u_id="+u_id+"\t",end="")
 				u_name = tp.xpath(".//a[@class='W_f14 W_fb S_txt1']/@title").extract()[0]
 				u_name = u_name.replace("\n","")
@@ -340,8 +344,12 @@ class WeiboSpider(scrapy.Spider):
 					newypost['zan_c'] = y_lk_c
 					print("y_z_c="+y_z_c+"\ty_c_c="+y_c_c+"\ty_lk_c="+y_lk_c)
 					newypost['zhuan_id'] = "No"
-					#newypost['content=']=""
-					newypost['t_id']=""
+					newcontent = mark.xpath(".//div[@class='WB_text']")
+					if(len(newcontent)==0):
+						newypost['content']="没有内容"
+					else:
+						newypost['content']=newcontent.xpath("string(.)").extract()[0]
+					newypost['t_id']="原"
 					if(y_id not in self.tplist):
 						self.tplist.append(y_id)
 						yield newypost
@@ -363,7 +371,11 @@ class WeiboSpider(scrapy.Spider):
 						newpost['zhuan_id'] = "No"
 					else:
 						newpost['zhuan_id'] = y_id
-					content=""
+					content=tp.xpath(".//div[@class='WB_text W_f14']")
+					if(len(content)==0):
+						newpost['content']="没有内容"
+					else:
+						newpost['content']="内容为"+content.xpath("string(.)").extract()[0]
 					yield newpost
 			#判断有无下一页或者是否达到五百条
 			nextpages = response.xpath("//a[@class='page next S_txt1 S_line1']")
@@ -408,6 +420,7 @@ class WeiboSpider(scrapy.Spider):
 				newfans = Fans_listItem()
 				u_name = li.xpath(".//a[@class='S_txt1']/@title").extract()[0]
 				newfans['u_name'] = u_name
+				print(response.meta['name'],response.meta['count']+i,"fans:",end=" ")
 				print("u_name="+u_name,end="\t")
 				u_id = li.xpath(".//a[@class='S_txt1']/@usercard").extract()[0]
 				u_id = u_id[u_id.find("id=")+3:u_id.find("&refer")]
@@ -509,7 +522,7 @@ class WeiboSpider(scrapy.Spider):
 					newcom['comment_id'] = idd
 					newcom['u_id'] = u_id
 					newcom['u_name'] = u_name
-					#newcom['content'] = ""
+					newcom['content'] = text
 					yield newcom
 			response.meta['count']=response.meta['count']+counter
 			if(response.meta['count']>50):
